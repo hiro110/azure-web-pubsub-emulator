@@ -11,6 +11,10 @@ examples/python/__pycache__/
 examples/python/*.pyc
 examples/python/.venv/
 
+# C#
+examples/csharp/bin/
+examples/csharp/obj/
+
 # Editor
 .DS_Store
 *.swp

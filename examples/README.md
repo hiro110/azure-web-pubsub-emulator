@@ -19,7 +19,7 @@ Each script exercises the full client lifecycle:
 
 ### Runtime setup (mise)
 
-All required runtimes (Node.js 22, Python 3.12, Go 1.24) are declared in `.mise.toml` at the repository root.
+All required runtimes (Node.js 22, Python 3.12, Go 1.24, .NET 8) are declared in `.mise.toml` at the repository root.
 
 ```bash
 # Install mise: https://mise.jdx.dev/getting-started.html
@@ -112,6 +112,27 @@ go mod download
 
 ```bash
 go run main.go
+```
+
+Expected output matches the Node.js output above.
+
+---
+
+## C#
+
+Uses the official `Azure.Messaging.WebPubSub` v1.6.0 SDK.
+
+### Setup
+
+```bash
+cd examples/csharp
+dotnet restore
+```
+
+### Run
+
+```bash
+dotnet run
 ```
 
 Expected output matches the Node.js output above.
