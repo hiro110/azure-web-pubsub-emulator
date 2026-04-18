@@ -1,6 +1,7 @@
 # Binary
 web-pubsub-emulator
 dist/
+examples/go/go-check
 
 # Node.js
 examples/node/node_modules/

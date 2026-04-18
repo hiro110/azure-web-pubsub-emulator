@@ -94,3 +94,24 @@ python main.py
 ```
 
 Expected output matches the Node.js output above.
+
+---
+
+## Go
+
+No external Azure SDK is required. The example uses `github.com/golang-jwt/jwt/v5` for token generation and `github.com/gorilla/websocket` for WebSocket connections, implementing HMAC-SHA256 signing directly against the emulator's REST API.
+
+### Setup
+
+```bash
+cd examples/go
+go mod download
+```
+
+### Run
+
+```bash
+go run main.go
+```
+
+Expected output matches the Node.js output above.
