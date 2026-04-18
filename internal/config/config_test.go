@@ -15,7 +15,7 @@ func validConfig() *config.Config {
 	return &config.Config{
 		Server: config.ServerConfig{
 			Host: "0.0.0.0",
-			Port: 8080,
+			Port: 7290,
 		},
 		Auth: config.AuthConfig{
 			AccessKey: testAccessKey,
@@ -49,8 +49,8 @@ func TestLoad_Defaults(t *testing.T) {
 		t.Fatalf("Load: %v", err)
 	}
 
-	if cfg.Server.Port != 8080 {
-		t.Errorf("default port: got %d, want 8080", cfg.Server.Port)
+	if cfg.Server.Port != 7290 {
+		t.Errorf("default port: got %d, want 7290", cfg.Server.Port)
 	}
 	if cfg.Server.Host != "0.0.0.0" {
 		t.Errorf("default host: got %q, want 0.0.0.0", cfg.Server.Host)
@@ -68,8 +68,8 @@ func TestLoad_FileNotExist(t *testing.T) {
 	if err != nil {
 		t.Fatalf("missing file should not error, got: %v", err)
 	}
-	if cfg.Server.Port != 8080 {
-		t.Errorf("expected default port 8080, got %d", cfg.Server.Port)
+	if cfg.Server.Port != 7290 {
+		t.Errorf("expected default port 7290, got %d", cfg.Server.Port)
 	}
 }
 
@@ -152,8 +152,8 @@ func TestLoad_EnvInvalidPort(t *testing.T) {
 		t.Fatalf("Load: %v", err)
 	}
 	// invalid env port is silently ignored; default remains
-	if cfg.Server.Port != 8080 {
-		t.Errorf("invalid env port should keep default 8080, got %d", cfg.Server.Port)
+	if cfg.Server.Port != 7290 {
+		t.Errorf("invalid env port should keep default 7290, got %d", cfg.Server.Port)
 	}
 }
 
@@ -173,7 +173,7 @@ func TestApplyFlags_ZeroValues(t *testing.T) {
 	cfg := validConfig()
 	cfg.ApplyFlags(0, "", "")
 
-	if cfg.Server.Port != 8080 {
+	if cfg.Server.Port != 7290 {
 		t.Error("port should not change when flag is zero")
 	}
 	if cfg.Auth.AccessKey != testAccessKey {

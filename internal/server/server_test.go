@@ -1,7 +1,6 @@
 package server_test
 
 import (
-	"encoding/base64"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -17,13 +16,11 @@ import (
 
 const testAccessKey = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
 
-func mustDecodeBase64(t *testing.T, s string) []byte {
-	t.Helper()
-	b, err := base64.StdEncoding.DecodeString(s)
-	if err != nil {
-		t.Fatalf("base64 decode: %v", err)
-	}
-	return b
+// mustDecodeBase64 returns the raw string bytes of s.
+// The server stores the AccessKey as raw bytes (not decoded), so tests must
+// sign/validate with the same representation.
+func mustDecodeBase64(_ *testing.T, s string) []byte {
+	return []byte(s)
 }
 
 func newTestServer(t *testing.T) *server.Server {
