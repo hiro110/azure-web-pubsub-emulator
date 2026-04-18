@@ -1,0 +1,19 @@
+services:
+  emulator:
+    build: .
+    image: web-pubsub-emulator:dev
+    ports:
+      - "7290:7290"
+    volumes:
+      - ./config.yaml:/etc/web-pubsub-emulator/config.yaml:ro
+    environment:
+      # Override individual values without replacing the config file
+      WEBPUBSUB_ACCESS_KEY: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+      WEBPUBSUB_LOG_LEVEL: "info"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:7290/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    restart: unless-stopped

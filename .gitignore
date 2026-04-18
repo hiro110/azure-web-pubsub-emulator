@@ -1,0 +1,15 @@
+# Binary
+web-pubsub-emulator
+dist/
+
+# Node.js
+examples/node/node_modules/
+
+# Python
+examples/python/__pycache__/
+examples/python/*.pyc
+examples/python/.venv/
+
+# Editor
+.DS_Store
+*.swp

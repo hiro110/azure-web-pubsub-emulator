@@ -1,0 +1,23 @@
+server:
+  host: "0.0.0.0"
+  port: 7290
+
+auth:
+  # Base64-encoded key, minimum 32 bytes decoded.
+  # This default key is for local development only.
+  accessKey: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+
+logging:
+  level: "info"   # debug | info | warn | error
+  format: "text"  # text | json
+
+hubs:
+  - name: "hub1"
+    # eventHandlerUrl: "http://localhost:3000/eventhandler"
+    # events:
+    #   system:
+    #     - connect
+    #     - connected
+    #     - disconnected
+    #   user:
+    #     - "*"

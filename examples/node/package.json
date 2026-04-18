@@ -1,0 +1,13 @@
+{
+  "name": "web-pubsub-emulator-node-example",
+  "version": "1.0.0",
+  "description": "SDK compatibility check for Azure Web PubSub Emulator",
+  "type": "module",
+  "scripts": {
+    "start": "node main.mjs"
+  },
+  "dependencies": {
+    "@azure/web-pubsub": "^1.1.3",
+    "ws": "^8.18.0"
+  }
+}
