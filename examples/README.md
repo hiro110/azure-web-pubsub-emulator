@@ -118,6 +118,44 @@ Expected output matches the Node.js output above.
 
 ---
 
+## Webhook (Event Handler)
+
+Demonstrates end-to-end CloudEvents delivery between the emulator and an upstream event handler. This example is self-contained — it starts both the mock upstream server and the emulator in-process, then verifies all four system events:
+
+| Event | When |
+|-------|------|
+| `sys.connect` | Fired synchronously before WebSocket upgrade (can reject the connection) |
+| `sys.connected` | Fired asynchronously after the WebSocket upgrade completes |
+| `user.message` | Fired when a connected client sends a message |
+| `sys.disconnected` | Fired when a client disconnects |
+
+### Run
+
+```bash
+go run ./examples/webhook
+```
+
+Expected output:
+
+```
+✓ sys.connect fired (connectionId: ...)
+✓ sys.connected fired after WebSocket upgrade
+✓ user.message fired when client sends a message
+✓ user.message reply forwarded to WebSocket client
+✓ sys.connect rejection prevents WebSocket upgrade (403)
+✓ sys.disconnected fired after WebSocket close
+```
+
+To configure the upstream event handler URL in a real emulator instance, set `event_handler_url` in `config.yaml`:
+
+```yaml
+hubs:
+  - name: hub1
+    event_handler_url: http://localhost:8081/events
+```
+
+---
+
 ## C#
 
 Uses the official `Azure.Messaging.WebPubSub` v1.6.0 SDK.

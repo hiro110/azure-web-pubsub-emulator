@@ -1,0 +1,37 @@
+name: Claude PR Review
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+    branches: ["main", "develop"]
+
+jobs:
+  review:
+    name: Claude Code Review
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          claude_args: "--max-turns 5"
+          prompt: |
+            You are reviewing a Go codebase for an Azure Web PubSub local emulator.
+            Review this pull request and post inline comments directly on the diff.
+
+            Focus on:
+            - Correctness: logic errors, race conditions, goroutine leaks
+            - Security: authentication bypass risks, unvalidated input, secret exposure
+            - Go idioms: error handling patterns, context propagation, proper use of sync primitives
+            - WebSocket/HTTP protocol compliance with Azure Web PubSub behavior
+            - Test coverage: are new code paths tested?
+
+            Skip stylistic nitpicks and formatting. Report only issues that could cause
+            bugs, security vulnerabilities, or meaningful maintainability problems.
+            For each issue found, suggest a concrete fix.
