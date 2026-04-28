@@ -19,6 +19,9 @@ var (
 	flagPort      int
 	flagAccessKey string
 	flagLogLevel  string
+	flagTLS       bool
+	flagTLSCert   string
+	flagTLSKey    string
 )
 
 var rootCmd = &cobra.Command{
@@ -33,6 +36,9 @@ func init() {
 	rootCmd.Flags().IntVarP(&flagPort, "port", "p", 0, "Server port (overrides config)")
 	rootCmd.Flags().StringVar(&flagAccessKey, "access-key", "", "Access key (overrides config)")
 	rootCmd.Flags().StringVar(&flagLogLevel, "log-level", "", "Log level: debug|info|warn|error")
+	rootCmd.Flags().BoolVar(&flagTLS, "tls", false, "Enable TLS (HTTPS) listener")
+	rootCmd.Flags().StringVar(&flagTLSCert, "tls-cert", "", "Path to TLS certificate file (PEM)")
+	rootCmd.Flags().StringVar(&flagTLSKey, "tls-key", "", "Path to TLS private key file (PEM)")
 }
 
 func main() {
@@ -48,7 +54,12 @@ func run(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("loading config: %w", err)
 	}
 
-	cfg.ApplyFlags(flagPort, flagAccessKey, flagLogLevel)
+	var tlsEnabled *bool
+	if cmd.Flags().Changed("tls") {
+		v := flagTLS
+		tlsEnabled = &v
+	}
+	cfg.ApplyFlags(flagPort, flagAccessKey, flagLogLevel, tlsEnabled, flagTLSCert, flagTLSKey)
 
 	if err := cfg.Validate(); err != nil {
 		return fmt.Errorf("invalid config: %w", err)
