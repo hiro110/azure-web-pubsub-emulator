@@ -159,7 +159,7 @@ func TestLoad_EnvInvalidPort(t *testing.T) {
 
 func TestApplyFlags(t *testing.T) {
 	cfg := validConfig()
-	cfg.ApplyFlags(9090, testAccessKey, "debug")
+	cfg.ApplyFlags(9090, testAccessKey, "debug", nil, "", "")
 
 	if cfg.Server.Port != 9090 {
 		t.Errorf("port: got %d, want 9090", cfg.Server.Port)
@@ -171,13 +171,51 @@ func TestApplyFlags(t *testing.T) {
 
 func TestApplyFlags_ZeroValues(t *testing.T) {
 	cfg := validConfig()
-	cfg.ApplyFlags(0, "", "")
+	cfg.ApplyFlags(0, "", "", nil, "", "")
 
 	if cfg.Server.Port != 7290 {
 		t.Error("port should not change when flag is zero")
 	}
 	if cfg.Auth.AccessKey != testAccessKey {
 		t.Error("accessKey should not change when flag is empty")
+	}
+}
+
+func TestApplyFlags_TLS(t *testing.T) {
+	cfg := validConfig()
+	enabled := true
+	cfg.ApplyFlags(0, "", "", &enabled, "/path/to/cert.pem", "/path/to/key.pem")
+
+	if !cfg.Server.TLS.Enabled {
+		t.Error("TLS.Enabled should be true")
+	}
+	if cfg.Server.TLS.CertFile != "/path/to/cert.pem" {
+		t.Errorf("TLS.CertFile: got %q", cfg.Server.TLS.CertFile)
+	}
+	if cfg.Server.TLS.KeyFile != "/path/to/key.pem" {
+		t.Errorf("TLS.KeyFile: got %q", cfg.Server.TLS.KeyFile)
+	}
+}
+
+func TestLoad_TLSEnvOverrides(t *testing.T) {
+	t.Setenv("WEBPUBSUB_TLS_ENABLED", "true")
+	t.Setenv("WEBPUBSUB_TLS_CERT_FILE", "/tmp/cert.pem")
+	t.Setenv("WEBPUBSUB_TLS_KEY_FILE", "/tmp/key.pem")
+	t.Setenv("WEBPUBSUB_ACCESS_KEY", testAccessKey)
+
+	cfg, err := config.Load("/nonexistent")
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+
+	if !cfg.Server.TLS.Enabled {
+		t.Error("TLS.Enabled should be true via env")
+	}
+	if cfg.Server.TLS.CertFile != "/tmp/cert.pem" {
+		t.Errorf("TLS.CertFile: got %q", cfg.Server.TLS.CertFile)
+	}
+	if cfg.Server.TLS.KeyFile != "/tmp/key.pem" {
+		t.Errorf("TLS.KeyFile: got %q", cfg.Server.TLS.KeyFile)
 	}
 }
 
@@ -240,6 +278,50 @@ func TestValidate(t *testing.T) {
 				c.Hubs = []config.HubConfig{{Name: "chat"}, {Name: "chat"}}
 			},
 			wantErr: "duplicate hub name",
+		},
+		{
+			name: "tls enabled with only certFile",
+			mutate: func(c *config.Config) {
+				c.Server.TLS.Enabled = true
+				c.Server.TLS.AutoGenerate = false
+				c.Server.TLS.CertFile = "/path/cert.pem"
+			},
+			wantErr: "certFile and server.tls.keyFile must both be set",
+		},
+		{
+			name: "tls enabled with only keyFile",
+			mutate: func(c *config.Config) {
+				c.Server.TLS.Enabled = true
+				c.Server.TLS.AutoGenerate = false
+				c.Server.TLS.KeyFile = "/path/key.pem"
+			},
+			wantErr: "certFile and server.tls.keyFile must both be set",
+		},
+		{
+			name: "tls enabled autoGenerate false no cert",
+			mutate: func(c *config.Config) {
+				c.Server.TLS.Enabled = true
+				c.Server.TLS.AutoGenerate = false
+			},
+			wantErr: "autoGenerate is false but no certFile/keyFile",
+		},
+		{
+			name: "tls enabled with both certFile and keyFile",
+			mutate: func(c *config.Config) {
+				c.Server.TLS.Enabled = true
+				c.Server.TLS.AutoGenerate = false
+				c.Server.TLS.CertFile = "/path/cert.pem"
+				c.Server.TLS.KeyFile = "/path/key.pem"
+			},
+			wantErr: "",
+		},
+		{
+			name: "tls enabled autoGenerate true no cert needed",
+			mutate: func(c *config.Config) {
+				c.Server.TLS.Enabled = true
+				c.Server.TLS.AutoGenerate = true
+			},
+			wantErr: "",
 		},
 	}
 

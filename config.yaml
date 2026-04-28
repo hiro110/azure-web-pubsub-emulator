@@ -1,6 +1,14 @@
 server:
   host: "0.0.0.0"
   port: 7290
+  tls:
+    enabled: false       # set to true to enable HTTPS
+    autoGenerate: true   # generate an ephemeral self-signed cert on startup
+    # certFile: ""       # optional: path to PEM cert (overrides autoGenerate)
+    # keyFile: ""        # optional: path to PEM key (must be set with certFile)
+    hosts:               # SANs for auto-generated cert
+      - "localhost"
+      - "127.0.0.1"
 
 auth:
   # Base64-encoded key, minimum 32 bytes decoded.

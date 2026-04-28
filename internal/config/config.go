@@ -17,8 +17,17 @@ type Config struct {
 }
 
 type ServerConfig struct {
-	Host string `yaml:"host"`
-	Port int    `yaml:"port"`
+	Host string    `yaml:"host"`
+	Port int       `yaml:"port"`
+	TLS  TLSConfig `yaml:"tls"`
+}
+
+type TLSConfig struct {
+	Enabled      bool     `yaml:"enabled"`
+	AutoGenerate bool     `yaml:"autoGenerate"`
+	CertFile     string   `yaml:"certFile"`
+	KeyFile      string   `yaml:"keyFile"`
+	Hosts        []string `yaml:"hosts"`
 }
 
 type AuthConfig struct {
@@ -46,6 +55,10 @@ func defaultConfig() Config {
 		Server: ServerConfig{
 			Host: "0.0.0.0",
 			Port: 7290,
+			TLS: TLSConfig{
+				AutoGenerate: true,
+				Hosts:        []string{"localhost", "127.0.0.1"},
+			},
 		},
 		Logging: LoggingConfig{
 			Level:  "info",
@@ -89,10 +102,21 @@ func applyEnvOverrides(cfg *Config) {
 	if v := os.Getenv("WEBPUBSUB_LOG_FORMAT"); v != "" {
 		cfg.Logging.Format = v
 	}
+	if v := os.Getenv("WEBPUBSUB_TLS_ENABLED"); v != "" {
+		if b, err := strconv.ParseBool(v); err == nil {
+			cfg.Server.TLS.Enabled = b
+		}
+	}
+	if v := os.Getenv("WEBPUBSUB_TLS_CERT_FILE"); v != "" {
+		cfg.Server.TLS.CertFile = v
+	}
+	if v := os.Getenv("WEBPUBSUB_TLS_KEY_FILE"); v != "" {
+		cfg.Server.TLS.KeyFile = v
+	}
 }
 
 // ApplyFlags overrides config values with CLI flag values (non-zero/non-empty only).
-func (c *Config) ApplyFlags(port int, accessKey, logLevel string) {
+func (c *Config) ApplyFlags(port int, accessKey, logLevel string, tlsEnabled *bool, tlsCert, tlsKey string) {
 	if port != 0 {
 		c.Server.Port = port
 	}
@@ -101,6 +125,15 @@ func (c *Config) ApplyFlags(port int, accessKey, logLevel string) {
 	}
 	if logLevel != "" {
 		c.Logging.Level = logLevel
+	}
+	if tlsEnabled != nil {
+		c.Server.TLS.Enabled = *tlsEnabled
+	}
+	if tlsCert != "" {
+		c.Server.TLS.CertFile = tlsCert
+	}
+	if tlsKey != "" {
+		c.Server.TLS.KeyFile = tlsKey
 	}
 }
 
@@ -129,6 +162,17 @@ func (c *Config) Validate() error {
 	validFormats := map[string]bool{"text": true, "json": true}
 	if !validFormats[c.Logging.Format] {
 		return fmt.Errorf("logging.format must be one of text|json (got %q)", c.Logging.Format)
+	}
+
+	if c.Server.TLS.Enabled {
+		hasCert := c.Server.TLS.CertFile != ""
+		hasKey := c.Server.TLS.KeyFile != ""
+		if hasCert != hasKey {
+			return fmt.Errorf("server.tls.certFile and server.tls.keyFile must both be set or both be empty")
+		}
+		if !c.Server.TLS.AutoGenerate && !hasCert {
+			return fmt.Errorf("server.tls.autoGenerate is false but no certFile/keyFile provided")
+		}
 	}
 
 	seen := map[string]bool{}
