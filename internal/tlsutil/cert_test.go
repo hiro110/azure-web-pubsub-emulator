@@ -10,9 +10,12 @@ import (
 )
 
 func TestGenerateSelfSigned_ReturnsPEM(t *testing.T) {
-	certPEM, keyPEM, err := tlsutil.GenerateSelfSigned([]string{"localhost", "127.0.0.1"})
+	caCertPEM, certPEM, keyPEM, err := tlsutil.GenerateSelfSigned([]string{"localhost", "127.0.0.1"})
 	if err != nil {
 		t.Fatalf("GenerateSelfSigned: %v", err)
+	}
+	if len(caCertPEM) == 0 {
+		t.Error("caCertPEM should not be empty")
 	}
 	if len(certPEM) == 0 {
 		t.Error("certPEM should not be empty")
@@ -23,7 +26,7 @@ func TestGenerateSelfSigned_ReturnsPEM(t *testing.T) {
 }
 
 func TestGenerateSelfSigned_ValidTLSPair(t *testing.T) {
-	certPEM, keyPEM, err := tlsutil.GenerateSelfSigned([]string{"localhost"})
+	_, certPEM, keyPEM, err := tlsutil.GenerateSelfSigned([]string{"localhost"})
 	if err != nil {
 		t.Fatalf("GenerateSelfSigned: %v", err)
 	}
@@ -34,16 +37,16 @@ func TestGenerateSelfSigned_ValidTLSPair(t *testing.T) {
 	}
 }
 
-func TestGenerateSelfSigned_SANs(t *testing.T) {
+func TestGenerateSelfSigned_LeafSANs(t *testing.T) {
 	hosts := []string{"localhost", "127.0.0.1", "example.local"}
-	certPEM, _, err := tlsutil.GenerateSelfSigned(hosts)
+	_, certPEM, _, err := tlsutil.GenerateSelfSigned(hosts)
 	if err != nil {
 		t.Fatalf("GenerateSelfSigned: %v", err)
 	}
 
 	block, _ := tlsutil.DecodePEMBlock(certPEM)
 	if block == nil {
-		t.Fatal("failed to decode PEM block")
+		t.Fatal("failed to decode leaf cert PEM block")
 	}
 
 	cert, err := x509.ParseCertificate(block)
@@ -72,7 +75,7 @@ func TestGenerateSelfSigned_SANs(t *testing.T) {
 }
 
 func TestGenerateSelfSigned_Validity(t *testing.T) {
-	certPEM, _, err := tlsutil.GenerateSelfSigned([]string{"localhost"})
+	_, certPEM, _, err := tlsutil.GenerateSelfSigned([]string{"localhost"})
 	if err != nil {
 		t.Fatalf("GenerateSelfSigned: %v", err)
 	}
@@ -92,8 +95,8 @@ func TestGenerateSelfSigned_Validity(t *testing.T) {
 	}
 }
 
-func TestGenerateSelfSigned_IsCA(t *testing.T) {
-	certPEM, _, err := tlsutil.GenerateSelfSigned([]string{"localhost"})
+func TestGenerateSelfSigned_LeafIsNotCA(t *testing.T) {
+	_, certPEM, _, err := tlsutil.GenerateSelfSigned([]string{"localhost"})
 	if err != nil {
 		t.Fatalf("GenerateSelfSigned: %v", err)
 	}
@@ -104,13 +107,60 @@ func TestGenerateSelfSigned_IsCA(t *testing.T) {
 		t.Fatalf("ParseCertificate: %v", err)
 	}
 
+	if cert.IsCA {
+		t.Error("leaf cert should NOT be a CA cert")
+	}
+}
+
+func TestGenerateSelfSigned_CAIsCA(t *testing.T) {
+	caCertPEM, _, _, err := tlsutil.GenerateSelfSigned([]string{"localhost"})
+	if err != nil {
+		t.Fatalf("GenerateSelfSigned: %v", err)
+	}
+
+	block, _ := tlsutil.DecodePEMBlock(caCertPEM)
+	cert, err := x509.ParseCertificate(block)
+	if err != nil {
+		t.Fatalf("ParseCertificate (CA): %v", err)
+	}
+
 	if !cert.IsCA {
-		t.Error("cert should be a CA cert")
+		t.Error("CA cert should have IsCA=true")
+	}
+}
+
+func TestGenerateSelfSigned_CASignsLeaf(t *testing.T) {
+	caCertPEM, certPEM, _, err := tlsutil.GenerateSelfSigned([]string{"localhost"})
+	if err != nil {
+		t.Fatalf("GenerateSelfSigned: %v", err)
+	}
+
+	caBlock, _ := tlsutil.DecodePEMBlock(caCertPEM)
+	caCert, err := x509.ParseCertificate(caBlock)
+	if err != nil {
+		t.Fatalf("ParseCertificate (CA): %v", err)
+	}
+
+	leafBlock, _ := tlsutil.DecodePEMBlock(certPEM)
+	leafCert, err := x509.ParseCertificate(leafBlock)
+	if err != nil {
+		t.Fatalf("ParseCertificate (leaf): %v", err)
+	}
+
+	pool := x509.NewCertPool()
+	pool.AddCert(caCert)
+
+	_, err = leafCert.Verify(x509.VerifyOptions{
+		Roots:     pool,
+		DNSName:   "localhost",
+	})
+	if err != nil {
+		t.Errorf("leaf cert does not verify against CA: %v", err)
 	}
 }
 
 func TestGenerateSelfSigned_EmptyHosts(t *testing.T) {
-	_, _, err := tlsutil.GenerateSelfSigned([]string{})
+	_, _, _, err := tlsutil.GenerateSelfSigned([]string{})
 	if err == nil {
 		t.Error("expected error for empty hosts, got nil")
 	}

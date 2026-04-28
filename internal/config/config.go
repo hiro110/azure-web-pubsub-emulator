@@ -105,6 +105,8 @@ func applyEnvOverrides(cfg *Config) {
 	if v := os.Getenv("WEBPUBSUB_TLS_ENABLED"); v != "" {
 		if b, err := strconv.ParseBool(v); err == nil {
 			cfg.Server.TLS.Enabled = b
+		} else {
+			fmt.Fprintf(os.Stderr, "warning: WEBPUBSUB_TLS_ENABLED=%q is not a valid bool (use true/false/1/0); ignoring\n", v)
 		}
 	}
 	if v := os.Getenv("WEBPUBSUB_TLS_CERT_FILE"); v != "" {

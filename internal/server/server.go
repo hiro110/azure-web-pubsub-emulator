@@ -85,7 +85,7 @@ func (s *Server) Run() error {
 			endpointHost = tlsCfg.Hosts[0]
 		}
 		if caPath != "" {
-			s.logger.Info("TLS CA cert written", zap.String("path", caPath))
+			s.logger.Info("TLS CA cert path", zap.String("path", caPath))
 			s.logger.Info("trust hint",
 				zap.String("NODE_EXTRA_CA_CERTS", caPath),
 				zap.String("SSL_CERT_FILE", caPath),
@@ -104,7 +104,7 @@ func (s *Server) Run() error {
 			scheme,
 			endpointHost,
 			s.cfg.Server.Port,
-			s.cfg.Auth.AccessKey,
+			maskSecret(s.cfg.Auth.AccessKey),
 		)),
 	)
 
@@ -153,12 +153,12 @@ func (s *Server) buildTLSListener(ln net.Listener) (net.Listener, string, error)
 			Certificates: []tls.Certificate{cert},
 			MinVersion:   tls.VersionTLS12,
 		}
-	} else {
+	} else if tlsCfg.AutoGenerate {
 		hosts := tlsCfg.Hosts
 		if len(hosts) == 0 {
 			hosts = []string{"localhost", "127.0.0.1"}
 		}
-		certPEM, keyPEM, err := tlsutil.GenerateSelfSigned(hosts)
+		caCertPEM, certPEM, keyPEM, err := tlsutil.GenerateSelfSigned(hosts)
 		if err != nil {
 			return nil, "", fmt.Errorf("generating self-signed cert: %w", err)
 		}
@@ -172,21 +172,22 @@ func (s *Server) buildTLSListener(ln net.Listener) (net.Listener, string, error)
 			MinVersion:   tls.VersionTLS12,
 		}
 
-		path, err := writeCAFile(certPEM)
+		path, err := writeCAFile(caCertPEM)
 		if err != nil {
 			s.logger.Warn("could not write CA cert to disk", zap.Error(err))
 		} else {
 			caPath = path
 		}
+	} else {
+		return nil, "", fmt.Errorf("TLS enabled but autoGenerate is false and no certFile/keyFile provided")
 	}
 
 	return tls.NewListener(ln, tlsConfig), caPath, nil
 }
 
-// writeCAFile writes the PEM cert to a well-known cache path (overwritten each
-// run) so the path stays stable across restarts and users can configure
-// NODE_EXTRA_CA_CERTS / SSL_CERT_FILE once.
-func writeCAFile(certPEM []byte) (string, error) {
+// writeCAFile writes the CA PEM to a stable cache path, overwriting each run
+// so the path stays constant and users can configure NODE_EXTRA_CA_CERTS once.
+func writeCAFile(caCertPEM []byte) (string, error) {
 	cacheDir, err := os.UserCacheDir()
 	if err != nil {
 		return "", fmt.Errorf("finding cache dir: %w", err)
@@ -201,9 +202,9 @@ func writeCAFile(certPEM []byte) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if _, err := f.Write(certPEM); err != nil {
-		f.Close()           //nolint:errcheck
-		os.Remove(path)     //nolint:errcheck
+	if _, err := f.Write(caCertPEM); err != nil {
+		f.Close()       //nolint:errcheck
+		os.Remove(path) //nolint:errcheck
 		return "", err
 	}
 	if err := f.Close(); err != nil {
@@ -211,4 +212,13 @@ func writeCAFile(certPEM []byte) (string, error) {
 		return "", err
 	}
 	return path, nil
+}
+
+// maskSecret returns the first 4 characters of s followed by "****", to avoid
+// logging the full access key while still giving enough context to identify it.
+func maskSecret(s string) string {
+	if len(s) <= 4 {
+		return "****"
+	}
+	return s[:4] + "****"
 }

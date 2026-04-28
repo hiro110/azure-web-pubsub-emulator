@@ -67,7 +67,7 @@ func TestBuildTLSListener_AutoGenerate(t *testing.T) {
 
 	pool := x509.NewCertPool()
 	if !pool.AppendCertsFromPEM(caPEM) {
-		t.Fatal("failed to parse CA cert from file")
+		t.Fatal("failed to parse CA cert from file — CA must be trusted separately from leaf cert")
 	}
 
 	mux := http.NewServeMux()
@@ -100,7 +100,7 @@ func TestBuildTLSListener_AutoGenerate(t *testing.T) {
 }
 
 func TestBuildTLSListener_UserCert(t *testing.T) {
-	certPEM, keyPEM, err := tlsutil.GenerateSelfSigned([]string{"localhost", "127.0.0.1"})
+	caCertPEM, certPEM, keyPEM, err := tlsutil.GenerateSelfSigned([]string{"localhost", "127.0.0.1"})
 	if err != nil {
 		t.Fatalf("GenerateSelfSigned: %v", err)
 	}
@@ -131,7 +131,7 @@ func TestBuildTLSListener_UserCert(t *testing.T) {
 	}
 
 	pool := x509.NewCertPool()
-	pool.AppendCertsFromPEM(certPEM)
+	pool.AppendCertsFromPEM(caCertPEM)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/ping", func(w http.ResponseWriter, _ *http.Request) {
@@ -181,7 +181,7 @@ func TestBuildTLSListener_BadCertFiles(t *testing.T) {
 }
 
 func TestWriteCAFile_Deterministic(t *testing.T) {
-	certPEM, _, err := tlsutil.GenerateSelfSigned([]string{"localhost"})
+	certPEM, _, _, err := tlsutil.GenerateSelfSigned([]string{"localhost"})
 	if err != nil {
 		t.Fatalf("GenerateSelfSigned: %v", err)
 	}
